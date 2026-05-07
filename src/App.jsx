@@ -179,7 +179,7 @@ async function callClaude(messages, systemPrompt) {
   return data.content?.[0]?.text || "";
 }
 
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbxl4Qy4SFPtm0he5Aqc9S2bvMswMMm1lH3twUv65uUdsDK5Whx28hhxIJckxtCStygmUw/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbyVG6GYtzUY7BL60hVQDMb1EVyQShCwz2o0L4_oF1PJAQ-l3ewc4fbS224wU3lhnK3Dlw/exec";
 
 async function syncToSheet(todayLog, score, date) {
   try {
