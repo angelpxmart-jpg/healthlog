@@ -183,7 +183,6 @@ const SHEET_URL = "https://script.google.com/macros/s/AKfycbwvcuh2P98KShJJkrExBm
 
 async function syncToSheet(todayLog, score, date) {
   try {
-    // Google Apps Script requires no-cors with FormData to avoid CORS preflight block
     const form = new FormData();
     form.append("payload", JSON.stringify({ log: todayLog, score: score || "", date }));
     await fetch(SHEET_URL, {
@@ -193,6 +192,17 @@ async function syncToSheet(todayLog, score, date) {
     });
   } catch(e) {
     console.warn("Sheet sync failed:", e);
+  }
+}
+
+async function loadFromSheet(date) {
+  try {
+    const res = await fetch(`${SHEET_URL}?date=${date}`);
+    const data = await res.json();
+    return data.log || null;
+  } catch(e) {
+    console.warn("Sheet load failed:", e);
+    return null;
   }
 }
 
@@ -629,8 +639,7 @@ export default function HealthLog() {
   const [todayLog, setTodayLog] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("hl_log"));
-      const today = new Date().toDateString();
-      return saved?.date === today ? saved.log : defaultLog;
+      return saved?.date === getTodayKey() ? saved.log : defaultLog;
     } catch { return defaultLog; }
   });
   const [history, setHistory] = useState(() => {
@@ -648,13 +657,41 @@ export default function HealthLog() {
   });
   const [profileForm, setProfileForm] = useState(profile);
   const fileRef = useRef();
+  const hasLoaded = useRef(false);
+
+  // 啟動時從 Google Sheet 載入今日資料，取筆數較多者
+  useEffect(() => {
+    const today = getTodayKey();
+    loadFromSheet(today).then(sheetLog => {
+      if (sheetLog) {
+        setTodayLog(current => {
+          const sheetCount = Object.values(sheetLog).flat().length;
+          const localCount = Object.values(current).flat().length;
+          return sheetCount >= localCount ? sheetLog : current;
+        });
+      }
+    });
+  }, []);
+
+  // 每次 todayLog 變動（非首次載入）自動同步到 Sheet
+  useEffect(() => {
+    if (!hasLoaded.current) {
+      hasLoaded.current = true;
+      return;
+    }
+    const hasData = todayLog.breakfast.length || todayLog.lunch.length ||
+      todayLog.dinner.length || todayLog.snack.length || todayLog.exercise.length;
+    if (hasData) {
+      syncToSheet(todayLog, null, getTodayKey());
+    }
+  }, [todayLog]);
 
   useEffect(() => {
     localStorage.setItem("hl_profile", JSON.stringify(profile));
   }, [profile]);
 
   useEffect(() => {
-    localStorage.setItem("hl_log", JSON.stringify({ date: new Date().toDateString(), log: todayLog }));
+    localStorage.setItem("hl_log", JSON.stringify({ date: getTodayKey(), log: todayLog }));
   }, [todayLog]);
 
   useEffect(() => {
