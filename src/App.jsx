@@ -589,7 +589,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
 
 // ===== HOME PAGE =====
 
-function HomePage({ profile, todayLog, todayNutrients, lastAdvice, summary, summaryLoading, loadingStep, handleSummary, setShowSetup, styles }) {
+function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, summary, summaryLoading, loadingStep, handleSummary, setShowSetup, styles }) {
   return (
     <div>
       <div style={styles.header}>
@@ -628,9 +628,17 @@ function HomePage({ profile, todayLog, todayNutrients, lastAdvice, summary, summ
           <div key={meal} style={styles.card}>
             <div style={styles.sectionTitle}>{label}</div>
             {items.map((item, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < items.length - 1 ? `1px solid ${COLORS.border}` : "none" }}>
-                <span style={{ fontSize: 14, color: COLORS.text }}>{item.name}</span>
-                <span style={{ fontSize: 13, color: COLORS.textMuted }}>{Math.round(item.calories)} kcal</span>
+              <div key={i} style={{ display: "flex", alignItems: "center", padding: "6px 0", borderBottom: i < items.length - 1 ? `1px solid ${COLORS.border}` : "none", gap: 4 }}>
+                <span style={{ fontSize: 14, color: COLORS.text, flex: 1 }}>{item.name}</span>
+                <span style={{ fontSize: 12, color: COLORS.green, fontWeight: 600, minWidth: 48, textAlign: "right" }}>
+                  💪 {Math.round(item.protein || 0)}g
+                </span>
+                <span style={{ fontSize: 13, color: COLORS.textMuted, minWidth: 64, textAlign: "right" }}>
+                  {Math.round(item.calories)} kcal
+                </span>
+                <button
+                  onClick={() => setTodayLog(log => ({ ...log, [meal]: log[meal].filter((_, idx) => idx !== i) }))}
+                  style={{ background: "none", border: "none", color: COLORS.border, cursor: "pointer", fontSize: 18, padding: "0 0 0 6px", lineHeight: 1, flexShrink: 0 }}>×</button>
               </div>
             ))}
           </div>
@@ -786,9 +794,10 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
                     <div key={meal} style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.brown, marginBottom: 4 }}>{label}</div>
                       {items.map((item, i) => (
-                        <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.text, paddingLeft: 8, marginBottom: 2 }}>
-                          <span>· {item.name}</span>
-                          <span style={{ color: COLORS.textMuted }}>{Math.round(item.calories)} kcal</span>
+                        <div key={i} style={{ display: "flex", alignItems: "center", fontSize: 12, color: COLORS.text, paddingLeft: 8, marginBottom: 2, gap: 4 }}>
+                          <span style={{ flex: 1 }}>· {item.name}</span>
+                          <span style={{ color: COLORS.green, fontWeight: 600, minWidth: 40, textAlign: "right" }}>💪 {Math.round(item.protein || 0)}g</span>
+                          <span style={{ color: COLORS.textMuted, minWidth: 56, textAlign: "right" }}>{Math.round(item.calories)} kcal</span>
                         </div>
                       ))}
                     </div>
@@ -1045,7 +1054,7 @@ export default function HealthLog() {
       `}</style>
 
       {page === "home" && <HomePage
-        profile={profile} todayLog={todayLog} todayNutrients={todayNutrients}
+        profile={profile} todayLog={todayLog} setTodayLog={setTodayLog} todayNutrients={todayNutrients}
         lastAdvice={lastAdvice} summary={summary} summaryLoading={summaryLoading}
         loadingStep={loadingStep} handleSummary={handleSummary}
         setShowSetup={setShowSetup} styles={styles}
