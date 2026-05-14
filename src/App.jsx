@@ -658,10 +658,13 @@ function HomePage({ profile, todayLog, todayNutrients, lastAdvice, summary, summ
                   <div style={{ fontSize: 36, fontWeight: 900, color: getScoreColor(summary.score), fontFamily: "'Noto Serif TC', serif" }}>
                     {summary.score ?? "—"}
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: getScoreColor(summary.score) }}>{getScoreEmoji(summary.score)} {summary.scoreLabel}</div>
                     <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>滿分 10 分</div>
                   </div>
+                  <button
+                    style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 10px", fontSize: 11, color: COLORS.textMuted, cursor: "pointer" }}
+                    onClick={handleSummary}>↺ 重新生成</button>
                 </div>
                 {summary.highlights && <div style={{ marginBottom: 10 }}><div style={{ fontSize: 12, color: COLORS.green, fontWeight: 700, marginBottom: 4 }}>✅ 做得好</div><div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7 }}>{summary.highlights}</div></div>}
                 {summary.improvements && <div style={{ marginBottom: 10 }}><div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, marginBottom: 4 }}>📌 可改善</div><div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7 }}>{summary.improvements}</div></div>}
