@@ -121,24 +121,117 @@ function LoadingDots({ messages, current }) {
 
 function AdviceCard({ advice }) {
   if (!advice) return null;
+
   if (typeof advice === "string") {
-    const lines = advice.split(/[•·\n]/).map(l => l.trim()).filter(Boolean);
+    const lines = advice.split("\n").map(l => l.trim()).filter(Boolean);
+
+    // Group lines into sections; **text** pattern = section header
+    const intro = [];
+    const sections = [];
+    let current = null;
+
+    for (const line of lines) {
+      const boldMatch = line.match(/^(.*?)\*\*([^*]+)\*\*\s*$/);
+      if (boldMatch) {
+        if (current) sections.push(current);
+        const titleText = (boldMatch[1] + boldMatch[2]).trim();
+        const isData = /累積|剩餘/.test(titleText);
+        const isAction = /建議|策略|戰術/.test(titleText);
+        current = { title: titleText, isData, isAction, items: [] };
+      } else if (!current) {
+        intro.push(line);
+      } else {
+        current.items.push(line);
+      }
+    }
+    if (current) sections.push(current);
+
+    const dataSections = sections.filter(s => s.isData);
+    const actionSections = sections.filter(s => s.isAction);
+    const otherSections = sections.filter(s => !s.isData && !s.isAction);
+
     return (
       <div>
-        {lines.map((line, i) => {
-          const colonIdx = line.indexOf("：");
-          const title = colonIdx > -1 ? line.slice(0, colonIdx) : null;
-          const body = colonIdx > -1 ? line.slice(colonIdx + 1) : line;
-          return (
-            <div key={i} style={{ marginBottom: 12, padding: "10px 12px", background: "rgba(255,255,255,0.6)", borderRadius: 10, borderLeft: `3px solid ${COLORS.greenLight}` }}>
-              {title && <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.green, marginBottom: 4 }}>{title}</div>}
-              <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7 }}>{body}</div>
+        {/* 確認訊息 — 純文字，不用卡片 */}
+        {intro.length > 0 && (
+          <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 10 }}>
+            {intro.join(" ")}
+          </div>
+        )}
+
+        {/* 數據區塊（今日累積 / 剩餘空間）— 並排、緊湊、低調 */}
+        {dataSections.length > 0 && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+            {dataSections.map((sec, i) => (
+              <div key={i} style={{
+                flex: 1, minWidth: 120,
+                background: COLORS.bg,
+                borderRadius: 10, padding: "8px 10px",
+              }}>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, marginBottom: 4 }}>
+                  {sec.title}
+                </div>
+                {sec.items.map((item, j) => (
+                  <div key={j} style={{ fontSize: 12, color: COLORS.text, lineHeight: 1.6 }}>{item}</div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 行動建議區塊 — 主視覺，綠色底 */}
+        {actionSections.map((sec, i) => (
+          <div key={i} style={{
+            background: COLORS.greenPale,
+            borderRadius: 12, padding: "12px 14px",
+            border: `1px solid ${COLORS.greenLight}`,
+            marginBottom: 8,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.green, marginBottom: 10 }}>
+              {sec.title}
             </div>
-          );
-        })}
+            {sec.items.map((item, j) => {
+              const colonIdx = item.indexOf("：");
+              if (colonIdx > -1) {
+                return (
+                  <div key={j} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.brown, marginBottom: 2 }}>
+                      {item.slice(0, colonIdx)}
+                    </div>
+                    <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>
+                      {item.slice(colonIdx + 1)}
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={j} style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.65, marginBottom: 6, paddingLeft: 4 }}>
+                  · {item}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* 其他區塊 */}
+        {otherSections.map((sec, i) => (
+          <div key={i} style={{ marginBottom: 10 }}>
+            {sec.title && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.textMuted, marginBottom: 6 }}>
+                {sec.title}
+              </div>
+            )}
+            {sec.items.map((item, j) => (
+              <div key={j} style={{ fontSize: 13, color: COLORS.text, marginBottom: 4, lineHeight: 1.6 }}>
+                {item}
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     );
   }
+
   if (Array.isArray(advice)) {
     return (
       <div>
@@ -169,7 +262,7 @@ async function callClaude(messages, systemPrompt) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 2500,
+      max_tokens: 1200,
       system: systemPrompt,
       messages,
     }),
@@ -203,13 +296,14 @@ async function loadFromSheet(date) {
 
 async function generateDailySummary(log, targets) {
   const systemPrompt = `你是專業營養師，根據今日飲食和運動記錄評分，只回傳JSON不要其他文字：{"score":8,"scoreLabel":"表現不錯","highlights":"今日優點...","improvements":"需改善...","tomorrowAdvice":"明日建議...","summary":"整體評語..."}`;
-  const raw = await callClaude(messages, systemPrompt);
+  const raw = await callClaude([{
+    role: "user",
+    content: `今日記錄：${JSON.stringify(log)}\n每日目標：${targets ? JSON.stringify(targets) : "未設定"}`
+  }], systemPrompt);
   try {
-    const cleaned = raw.replace(/```json\n?|```/g, "").trim();
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    return JSON.parse(match ? match[0] : cleaned);
+    return JSON.parse(raw.replace(/```json|```/g, "").trim());
   } catch {
-    return { hasFood: false, hasExercise: false, message: raw, items: [], nutrients: {}, exercise: null };
+    return { score: null, summary: raw, highlights: "", improvements: "", tomorrowAdvice: "" };
   }
 }
 
