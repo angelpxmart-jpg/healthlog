@@ -1,19 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 
 const COLORS = {
-  bg: "#F7F3EE",
-  card: "#FFFDF9",
+  bg: "#F5F5F7",
+  card: "#FFFFFF",
   green: "#5A7A5A",
   greenLight: "#8FAF8F",
-  greenPale: "#E8F0E8",
-  brown: "#7A5C3A",
-  brownLight: "#C4A882",
-  brownPale: "#F2EBE0",
-  text: "#2C2C2C",
-  textMuted: "#8A8078",
-  border: "#E0D8CE",
-  accent: "#D4845A",
-  white: "#FFFDF9",
+  greenPale: "#EEF4EE",
+  brown: "#6B7280",
+  brownLight: "#9CA3AF",
+  brownPale: "#F5F5F7",
+  text: "#1A1A1A",
+  textMuted: "#6B7280",
+  border: "#E5E7EB",
+  accent: "#5A7A5A",
+  white: "#FFFFFF",
 };
 
 const NUTRIENTS = [
@@ -150,79 +150,19 @@ function AdviceCard({ advice }) {
     const actionSections = sections.filter(s => s.isAction);
     const otherSections = sections.filter(s => !s.isData && !s.isAction);
 
+    // 只顯示行動建議，數字類區塊已在進度條顯示過，不重複
+    const displaySections = actionSections.length > 0 ? actionSections : otherSections;
+
     return (
       <div>
-        {/* 確認訊息 — 純文字，不用卡片 */}
-        {intro.length > 0 && (
-          <div style={{ fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7, marginBottom: 10 }}>
-            {intro.join(" ")}
-          </div>
-        )}
-
-        {/* 數據區塊（今日累積 / 剩餘空間）— 並排、緊湊、低調 */}
-        {dataSections.length > 0 && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            {dataSections.map((sec, i) => (
-              <div key={i} style={{
-                flex: 1, minWidth: 120,
-                background: COLORS.bg,
-                borderRadius: 10, padding: "8px 10px",
-              }}>
-                <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 700, marginBottom: 4 }}>
-                  {sec.title}
-                </div>
-                {sec.items.map((item, j) => (
-                  <div key={j} style={{ fontSize: 12, color: COLORS.text, lineHeight: 1.6 }}>{item}</div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 行動建議區塊 — 主視覺，綠色底 */}
-        {actionSections.map((sec, i) => (
-          <div key={i} style={{
-            background: COLORS.greenPale,
-            borderRadius: 12, padding: "12px 14px",
-            border: `1px solid ${COLORS.greenLight}`,
-            marginBottom: 8,
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.green, marginBottom: 10 }}>
-              {sec.title}
-            </div>
-            {sec.items.map((item, j) => {
-              const colonIdx = item.indexOf("：");
-              if (colonIdx > -1) {
-                return (
-                  <div key={j} style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.brown, marginBottom: 2 }}>
-                      {item.slice(0, colonIdx)}
-                    </div>
-                    <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>
-                      {item.slice(colonIdx + 1)}
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <div key={j} style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.65, marginBottom: 6, paddingLeft: 4 }}>
-                  · {item}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-
-        {/* 其他區塊 */}
-        {otherSections.map((sec, i) => (
-          <div key={i} style={{ marginBottom: 10 }}>
-            {sec.title && (
-              <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.textMuted, marginBottom: 6 }}>
-                {sec.title}
-              </div>
-            )}
+        {displaySections.map((sec, i) => (
+          <div key={i}>
             {sec.items.map((item, j) => (
-              <div key={j} style={{ fontSize: 13, color: COLORS.text, marginBottom: 4, lineHeight: 1.6 }}>
+              <div key={j} style={{
+                fontSize: 14, color: COLORS.text, lineHeight: 1.75,
+                paddingBottom: 12, marginBottom: 12,
+                borderBottom: j < sec.items.length - 1 ? `1px solid ${COLORS.border}` : "none",
+              }}>
                 {item}
               </div>
             ))}
@@ -342,9 +282,18 @@ ${mealSummary ? `已記錄餐點：\n${mealSummary}` : "今日尚無飲食記錄
 }
 
 規則：
-- 用戶說吃了什麼或上傳食物照片 → hasFood:true，分析五大營養素，message含今日剩餘額度與下一餐戰術建議
+- 用戶說吃了什麼或上傳食物照片 → hasFood:true，分析五大營養素，message格式如下（嚴格遵守）：
+  第一行：確認記錄（一句話）
+  第二行：空行
+  ⚡ **晚餐戰術建議**
+  根據今日剩餘量說明整體策略（一句話）
+  接著列出 2-4 個具體食物建議，每項獨立一行，格式必須是：食物名稱 份量（關鍵營養素數值）
+  範例格式：菠菜 100g（纖維 2.8g）
+  範例格式：糙米飯半碗 75g（碳水 27g，纖維 1.8g）
+  範例格式：雞胸肉 120g（蛋白質 28g）
+  最後一行：烹調方式建議（一句話）
 - 用戶說做了運動 → hasExercise:true，message確認記錄並說明消耗
-- 用戶問餐廳/點餐策略 → hasFood:false，message給具體戰術（優先選擇、雷區、纖維補償）
+- 用戶問餐廳/點餐策略 → hasFood:false，message給具體戰術（優先選擇、雷區、纖維補償），食物建議同樣附上份量與關鍵營養素數值
 - 用戶問今日狀態 → hasFood:false，message給完整分析報告
 - hasFood:false時items為空陣列，nutrients為空物件
 - message必須清楚、有戰略感，可用emoji增加可讀性`;
@@ -701,10 +650,10 @@ function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, 
       </div>
 
       {lastAdvice && (
-        <div style={{ ...styles.card, background: COLORS.greenPale, border: `1px solid ${COLORS.greenLight}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ ...styles.sectionTitle, marginBottom: 0, color: COLORS.green }}>
-              🥗 {lastAdvice.nextMeal}建議
+        <div style={styles.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.green }}>
+              {lastAdvice.nextMeal}建議
             </div>
             <span style={{ fontSize: 11, color: COLORS.textMuted }}>
               {MEAL_LABELS[lastAdvice.meal] || lastAdvice.meal} 後 · {lastAdvice.time}
@@ -1053,12 +1002,13 @@ export default function HealthLog() {
     headerDate: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
     card: {
       background: COLORS.card, borderRadius: 16, padding: "16px 20px",
-      margin: "12px 16px", boxShadow: "0 2px 12px rgba(90,122,90,0.08)",
+      margin: "10px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
       border: `1px solid ${COLORS.border}`,
     },
     sectionTitle: {
-      fontFamily: "'Noto Serif TC', serif", fontSize: 15, fontWeight: 700,
-      color: COLORS.brown, marginBottom: 14,
+      fontFamily: "'Noto Sans TC', sans-serif", fontSize: 12, fontWeight: 700,
+      color: COLORS.textMuted, letterSpacing: 0.5, textTransform: "uppercase",
+      marginBottom: 14,
     },
     btn: {
       background: COLORS.green, color: "#fff", border: "none",
@@ -1142,7 +1092,7 @@ export default function HealthLog() {
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: ${COLORS.bg}; }
+        body { margin: 0; background: ${COLORS.bg}; -webkit-font-smoothing: antialiased; }
         textarea:focus, input:focus { border-color: ${COLORS.greenLight} !important; }
       `}</style>
 
