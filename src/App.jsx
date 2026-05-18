@@ -3,16 +3,16 @@ import { useState, useEffect, useRef } from "react";
 const COLORS = {
   bg: "#F5F5F7",
   card: "#FFFFFF",
-  green: "#5A7A5A",
-  greenLight: "#8FAF8F",
-  greenPale: "#EEF4EE",
+  green: "#E8622A",
+  greenLight: "#F5A87A",
+  greenPale: "#FFF0E8",
   brown: "#6B7280",
   brownLight: "#9CA3AF",
   brownPale: "#F5F5F7",
   text: "#1A1A1A",
   textMuted: "#6B7280",
   border: "#E5E7EB",
-  accent: "#5A7A5A",
+  accent: "#DC4F4F",
   white: "#FFFFFF",
 };
 
@@ -119,19 +119,57 @@ function LoadingDots({ messages, current }) {
   );
 }
 
+function renderAdviceLine(text) {
+  const clean = text.replace(/^[-•·]\s*/, "");
+
+  // 食物建議行：「建議：X+Y+Z」格式 → 每個食物加橘色 pill
+  if (clean.includes("+") && clean.includes("：")) {
+    const colonIdx = clean.indexOf("：");
+    const label = clean.slice(0, colonIdx);
+    const foods = clean.slice(colonIdx + 1).split("+").map(f => f.trim()).filter(Boolean);
+    return (
+      <span>
+        {label}：
+        {foods.map((food, i) => (
+          <span key={i}>
+            {i > 0 && " "}
+            <span style={{
+              background: COLORS.greenPale, color: COLORS.green,
+              borderRadius: 5, padding: "2px 8px",
+              fontWeight: 600, display: "inline-block",
+            }}>{food}</span>
+          </span>
+        ))}
+      </span>
+    );
+  }
+
+  // 數字 + 單位（如 42g、611 kcal、2.8g）→ 橘色粗體
+  const parts = clean.split(/(\d+(?:\.\d+)?\s*(?:g|kcal|mg|大卡|公克|%))/g);
+  return (
+    <span>
+      {parts.map((part, i) =>
+        /^\d+(?:\.\d+)?\s*(?:g|kcal|mg|大卡|公克|%)$/.test(part)
+          ? <strong key={i} style={{ color: COLORS.green }}>{part}</strong>
+          : part
+      )}
+    </span>
+  );
+}
+
 function AdviceCard({ advice }) {
   if (!advice) return null;
 
   if (typeof advice === "string") {
     const lines = advice.split("\n").map(l => l.trim()).filter(Boolean);
 
-    // Group lines into sections; **text** pattern = section header
     const intro = [];
     const sections = [];
     let current = null;
 
     for (const line of lines) {
-      const boldMatch = line.match(/^(.*?)\*\*([^*]+)\*\*\s*$/);
+      // 修正：移除 \s*$ 限制，允許 ** 後方有額外文字
+      const boldMatch = line.match(/^(.*?)\*\*([^*]+)\*\*/);
       if (boldMatch) {
         if (current) sections.push(current);
         const titleText = (boldMatch[1] + boldMatch[2]).trim();
@@ -146,11 +184,8 @@ function AdviceCard({ advice }) {
     }
     if (current) sections.push(current);
 
-    const dataSections = sections.filter(s => s.isData);
     const actionSections = sections.filter(s => s.isAction);
     const otherSections = sections.filter(s => !s.isData && !s.isAction);
-
-    // 只顯示行動建議，數字類區塊已在進度條顯示過，不重複
     const displaySections = actionSections.length > 0 ? actionSections : otherSections;
 
     return (
@@ -163,7 +198,7 @@ function AdviceCard({ advice }) {
                 paddingBottom: 12, marginBottom: 12,
                 borderBottom: j < sec.items.length - 1 ? `1px solid ${COLORS.border}` : "none",
               }}>
-                {item}
+                {renderAdviceLine(item)}
               </div>
             ))}
           </div>
@@ -176,15 +211,8 @@ function AdviceCard({ advice }) {
     return (
       <div>
         {advice.map((item, i) => (
-          <div key={i} style={{ marginBottom: 10, padding: "10px 12px", background: "rgba(255,255,255,0.6)", borderRadius: 10, borderLeft: `3px solid ${COLORS.greenLight}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.green }}>{item.title}</div>
-              {item.pct && (
-                <div style={{ fontSize: 11, background: COLORS.greenPale, color: COLORS.green, borderRadius: 6, padding: "2px 7px", fontWeight: 600 }}>
-                  {item.pct}%
-                </div>
-              )}
-            </div>
+          <div key={i} style={{ marginBottom: 10, padding: "10px 12px", background: COLORS.greenPale, borderRadius: 10, borderLeft: `3px solid ${COLORS.greenLight}` }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.green, marginBottom: 4 }}>{item.title}</div>
             <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7 }}>{item.suggestion}</div>
           </div>
         ))}
@@ -282,18 +310,16 @@ ${mealSummary ? `已記錄餐點：\n${mealSummary}` : "今日尚無飲食記錄
 }
 
 規則：
-- 用戶說吃了什麼或上傳食物照片 → hasFood:true，分析五大營養素，message格式如下（嚴格遵守）：
-  第一行：確認記錄（一句話）
-  第二行：空行
+- 用戶說吃了什麼或上傳食物照片 → hasFood:true，分析五大營養素，message格式如下（嚴格遵守，禁止增加其他內容）：
   ⚡ **晚餐戰術建議**
-  根據今日剩餘量說明整體策略（一句話）
-  接著列出 2-4 個具體食物建議，每項獨立一行，格式必須是：食物名稱 份量（關鍵營養素數值）
-  範例格式：菠菜 100g（纖維 2.8g）
-  範例格式：糙米飯半碗 75g（碳水 27g，纖維 1.8g）
-  範例格式：雞胸肉 120g（蛋白質 28g）
-  最後一行：烹調方式建議（一句話）
+  根據今日剩餘量說明整體策略（一句話，可包含剩餘熱量數字）
+  接著列出 2-4 個具體食物建議，每項獨立一行，格式：食物名稱 份量（關鍵營養素數值）
+  範例：菠菜 100g（纖維 2.8g）
+  範例：糙米飯半碗 75g（碳水 27g，纖維 1.8g）
+  最後一行固定格式→ 建議：食物1+食物2+食物3（例：建議：蒸蛋白+大量青菜+少量澱粉）
+  嚴格禁止：不可在建議前列出熱量/蛋白質/碳水/纖維的數值清單
 - 用戶說做了運動 → hasExercise:true，message確認記錄並說明消耗
-- 用戶問餐廳/點餐策略 → hasFood:false，message給具體戰術（優先選擇、雷區、纖維補償），食物建議同樣附上份量與關鍵營養素數值
+- 用戶問餐廳/點餐策略 → hasFood:false，message給具體戰術（優先選擇、雷區、纖維補償），食物建議同樣附上份量與關鍵營養素數值，最後一行同樣用「建議：X+Y+Z」格式
 - 用戶問今日狀態 → hasFood:false，message給完整分析報告
 - hasFood:false時items為空陣列，nutrients為空物件
 - message必須清楚、有戰略感，可用emoji增加可讀性`;
