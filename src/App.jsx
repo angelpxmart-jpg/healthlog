@@ -169,7 +169,7 @@ async function callClaude(messages, systemPrompt) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1200,
+      max_tokens: 2500,
       system: systemPrompt,
       messages,
     }),
@@ -203,14 +203,13 @@ async function loadFromSheet(date) {
 
 async function generateDailySummary(log, targets) {
   const systemPrompt = `你是專業營養師，根據今日飲食和運動記錄評分，只回傳JSON不要其他文字：{"score":8,"scoreLabel":"表現不錯","highlights":"今日優點...","improvements":"需改善...","tomorrowAdvice":"明日建議...","summary":"整體評語..."}`;
-  const raw = await callClaude([{
-    role: "user",
-    content: `今日記錄：${JSON.stringify(log)}\n每日目標：${targets ? JSON.stringify(targets) : "未設定"}`
-  }], systemPrompt);
+  const raw = await callClaude(messages, systemPrompt);
   try {
-    return JSON.parse(raw.replace(/```json|```/g, "").trim());
+    const cleaned = raw.replace(/```json\n?|```/g, "").trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    return JSON.parse(match ? match[0] : cleaned);
   } catch {
-    return { score: null, summary: raw, highlights: "", improvements: "", tomorrowAdvice: "" };
+    return { hasFood: false, hasExercise: false, message: raw, items: [], nutrients: {}, exercise: null };
   }
 }
 
