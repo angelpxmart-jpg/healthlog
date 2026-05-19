@@ -262,11 +262,14 @@ async function loadFromSheet(date) {
   }
 }
 
-async function generateDailySummary(log, targets) {
+async function generateDailySummary(log, targets, todayNutrients) {
   const systemPrompt = `你是專業營養師，根據今日飲食和運動記錄評分，只回傳JSON不要其他文字：{"score":8,"scoreLabel":"表現不錯","highlights":"今日優點...","improvements":"需改善...","tomorrowAdvice":"明日建議...","summary":"整體評語..."}`;
+  const nutrientSummary = todayNutrients
+    ? `今日實際攝取（以下數值為準，勿自行加總）：熱量${Math.round(todayNutrients.calories)}kcal，蛋白質${Math.round(todayNutrients.protein)}g，脂肪${Math.round(todayNutrients.fat)}g，碳水${Math.round(todayNutrients.carbs)}g，膳食纖維${Math.round(todayNutrients.fiber)}g`
+    : "";
   const raw = await callClaude([{
     role: "user",
-    content: `今日記錄：${JSON.stringify(log)}\n每日目標：${targets ? JSON.stringify(targets) : "未設定"}`
+    content: `今日記錄：${JSON.stringify(log)}\n每日目標：${targets ? JSON.stringify(targets) : "未設定"}\n${nutrientSummary}`
   }], systemPrompt);
   try {
     return JSON.parse(raw.replace(/```json|```/g, "").trim());
@@ -993,7 +996,7 @@ export default function HealthLog() {
   const handleSummary = async () => {
     setSummaryLoading(true);
     setLoadingStep(0);
-    const result = await generateDailySummary(todayLog, profile.targets);
+    const result = await generateDailySummary(todayLog, profile.targets, getTodayNutrients());
     setSummary(result);
     const todayKey = getTodayKey();
     const nutrients = getTodayNutrients();
