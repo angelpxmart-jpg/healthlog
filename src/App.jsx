@@ -303,7 +303,7 @@ ${mealSummary ? `已記錄餐點：\n${mealSummary}` : "今日尚無飲食記錄
   "hasFood": true或false,
   "hasExercise": true或false,
   "meal": "breakfast|lunch|dinner|snack",
-  "items": [{"name":"食物名","calories":0,"protein":0,"fat":0,"carbs":0,"fiber":0}],
+  "items": [{"name":"食物名","grams":0,"calories":0,"protein":0,"fat":0,"carbs":0,"fiber":0}],
   "nutrients": {"calories":0,"protein":0,"fat":0,"carbs":0,"fiber":0},
   "exercise": {"type":"運動類型","duration":0},
   "message": "給用戶的回應"
@@ -697,7 +697,10 @@ function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, 
             <div style={styles.sectionTitle}>{label}</div>
             {items.map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", padding: "6px 0", borderBottom: i < items.length - 1 ? `1px solid ${COLORS.border}` : "none", gap: 4 }}>
-                <span style={{ fontSize: 14, color: COLORS.text, flex: 1 }}>{item.name}</span>
+                <span style={{ fontSize: 14, color: COLORS.text, flex: 1 }}>
+                  {item.name}
+                  {item.grams > 0 && <span style={{ color: COLORS.textMuted, fontSize: 12, marginLeft: 4 }}>{item.grams}g</span>}
+                </span>
                 <span style={{ fontSize: 12, color: COLORS.green, fontWeight: 600, minWidth: 48, textAlign: "right" }}>
                   💪 {Math.round(item.protein || 0)}g
                 </span>
@@ -863,7 +866,7 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
                       <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.brown, marginBottom: 4 }}>{label}</div>
                       {items.map((item, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", fontSize: 12, color: COLORS.text, paddingLeft: 8, marginBottom: 2, gap: 4 }}>
-                          <span style={{ flex: 1 }}>· {item.name}</span>
+                          <span style={{ flex: 1 }}>· {item.name}{item.grams > 0 && <span style={{ color: COLORS.textMuted, marginLeft: 4 }}>{item.grams}g</span>}</span>
                           <span style={{ color: COLORS.green, fontWeight: 600, minWidth: 40, textAlign: "right" }}>💪 {Math.round(item.protein || 0)}g</span>
                           <span style={{ color: COLORS.textMuted, minWidth: 56, textAlign: "right" }}>{Math.round(item.calories)} kcal</span>
                         </div>
