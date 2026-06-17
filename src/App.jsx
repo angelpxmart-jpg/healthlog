@@ -649,9 +649,9 @@ async function loadFromSheet(date) {
 }
 
 async function generateDailySummary(log, targets, todayNutrients) {
-  const systemPrompt = `你是專業營養師，根據今日飲食和運動記錄評分，只回傳JSON不要其他文字：{"score":8,"scoreLabel":"表現不錯","highlights":"今日優點...","improvements":"需改善...","tomorrowAdvice":"明日建議...","summary":"整體評語..."}`;
+  const systemPrompt = `你是專業營養師，根據今日飲食記錄產出一句具體正向觀察，只回傳JSON不要其他文字：{"highlight":"一句具體正向觀察，例：蛋白質集中在兩餐攝取，效率高"}`;
   const nutrientSummary = todayNutrients
-    ? `今日實際攝取（以下數值為準，勿自行加總）：熱量${Math.round(todayNutrients.calories)}kcal，蛋白質${Math.round(todayNutrients.protein)}g，脂肪${Math.round(todayNutrients.fat)}g，碳水${Math.round(todayNutrients.carbs)}g，膳食纖維${Math.round(todayNutrients.fiber)}g`
+    ? `今日實際攝取：熱量${Math.round(todayNutrients.calories)}kcal，蛋白質${Math.round(todayNutrients.protein)}g，脂肪${Math.round(todayNutrients.fat)}g，碳水${Math.round(todayNutrients.carbs)}g，膳食纖維${Math.round(todayNutrients.fiber)}g`
     : "";
   const raw = await callClaude([{
     role: "user",
@@ -660,7 +660,7 @@ async function generateDailySummary(log, targets, todayNutrients) {
   try {
     return JSON.parse(raw.replace(/```json|```/g, "").trim());
   } catch {
-    return { score: null, summary: raw, highlights: "", improvements: "", tomorrowAdvice: "" };
+    return { highlight: raw };
   }
 }
 
@@ -1172,26 +1172,29 @@ function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, 
       <div style={styles.card}>
         <div style={styles.sectionTitle}>今日總結</div>
         {summaryLoading
-          ? <LoadingDots messages={["分析今日飲食中...", "計算營養平衡...", "AI 評分中...", "整理建議中..."]} current={loadingStep} />
+          ? <LoadingDots messages={["分析今日飲食中...", "計算蛋白質達標率...", "整理亮點中..."]} current={loadingStep} />
           : summary
             ? <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, padding: "12px 16px", background: COLORS.bg, borderRadius: 12 }}>
-                  <div style={{ fontSize: 36, fontWeight: 900, color: getScoreColor(summary.score), fontFamily: "'Noto Serif TC', serif" }}>
-                    {summary.score ?? "—"}
-                  </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: getScoreColor(summary.score) }}>{getScoreEmoji(summary.score)} {summary.scoreLabel}</div>
-                    <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>滿分 10 分</div>
+                    {summary.proteinPct !== null && summary.proteinPct !== undefined && (
+                      <div style={{ fontSize: 22, fontWeight: 900, color: COLORS.green, fontFamily: "'Noto Serif TC', serif" }}>蛋白質 {summary.proteinPct}%</div>
+                    )}
+                    {summary.eatingWindowHours !== null && summary.eatingWindowHours !== undefined && (
+                      <div style={{ fontSize: 14, color: COLORS.textMuted, marginTop: 4 }}>⏱ 進食 {summary.eatingWindowHours}h</div>
+                    )}
                   </div>
                   <button
                     style={{ background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 10px", fontSize: 11, color: COLORS.textMuted, cursor: "pointer" }}
                     onClick={handleSummary}>↺ 重新生成</button>
                 </div>
-                {summary.highlights && <div style={{ marginBottom: 10 }}><div style={{ fontSize: 12, color: COLORS.green, fontWeight: 700, marginBottom: 4 }}>✅ 做得好</div><div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7 }}>{summary.highlights}</div></div>}
-                {summary.improvements && <div style={{ marginBottom: 10 }}><div style={{ fontSize: 12, color: COLORS.accent, fontWeight: 700, marginBottom: 4 }}>📌 可改善</div><div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7 }}>{summary.improvements}</div></div>}
-                {summary.tomorrowAdvice && <div style={{ padding: "10px 14px", background: COLORS.brownPale, borderRadius: 10 }}><div style={{ fontSize: 12, color: COLORS.brown, fontWeight: 700, marginBottom: 4 }}>🌅 明日建議</div><div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7 }}>{summary.tomorrowAdvice}</div></div>}
+                {summary.highlight && (
+                  <div style={{ padding: "10px 14px", background: COLORS.greenPale, borderRadius: 10 }}>
+                    <div style={{ fontSize: 13, color: COLORS.green, lineHeight: 1.7 }}>✅ {summary.highlight}</div>
+                  </div>
+                )}
               </div>
-            : <button style={styles.btn} onClick={handleSummary}>生成今日總結與評分 ✨</button>}
+            : <button style={styles.btn} onClick={handleSummary}>生成今日總結 ✨</button>}
       </div>
     </div>
   );
@@ -1214,7 +1217,7 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
       const n = getTodayNutrients();
       const hasData = [...todayLog.breakfast,...todayLog.lunch,...todayLog.dinner,...todayLog.snack].length > 0 || todayLog.exercise.length > 0;
       if (!hasData) return null;
-      return { log: todayLog, nutrients: n, score: summary?.score || history[key]?.score || null, scoreLabel: summary?.scoreLabel || history[key]?.scoreLabel || "", highlights: summary?.highlights || history[key]?.highlights || "", improvements: summary?.improvements || history[key]?.improvements || "" };
+      return { log: todayLog, nutrients: n, proteinPct: summary?.proteinPct ?? history[key]?.proteinPct ?? null, eatingWindowHours: summary?.eatingWindowHours ?? history[key]?.eatingWindowHours ?? null, highlight: summary?.highlight || history[key]?.highlight || "" };
     }
     return history[key] || null;
   };
@@ -1249,7 +1252,7 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
         const isToday = key === getTodayKey();
         if (!entry) return null;
 
-        const { log: dayLog, nutrients, score, scoreLabel, highlights, improvements } = entry;
+        const { log: dayLog, nutrients, proteinPct, eatingWindowHours, highlight } = entry;
         const allMeals = [...(dayLog.breakfast||[]), ...(dayLog.lunch||[]), ...(dayLog.dinner||[]), ...(dayLog.snack||[])];
 
         return (
@@ -1267,12 +1270,12 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                {score
+                {(proteinPct !== null || eatingWindowHours !== null)
                   ? <div>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: getScoreColor(score), fontFamily: "'Noto Serif TC', serif" }}>{score}</div>
-                      <div style={{ fontSize: 10, color: getScoreColor(score) }}>{getScoreEmoji(score)}</div>
+                      {proteinPct !== null && <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.green }}>蛋白質 {proteinPct}%</div>}
+                      {eatingWindowHours !== null && <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>進食 {eatingWindowHours}h</div>}
                     </div>
-                  : <div style={{ fontSize: 12, color: COLORS.border }}>未評分</div>
+                  : <div style={{ fontSize: 12, color: COLORS.border }}>未記錄</div>
                 }
               </div>
             </div>
@@ -1320,11 +1323,9 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
                   </div>
                 )}
 
-                {score && (
-                  <div style={{ marginTop: 10, padding: "10px 12px", background: COLORS.bg, borderRadius: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: getScoreColor(score), marginBottom: 6 }}>{getScoreEmoji(score)} 評分 {score}/10 · {scoreLabel}</div>
-                    {highlights && <div style={{ fontSize: 12, color: COLORS.text, marginBottom: 4 }}>✅ {highlights}</div>}
-                    {improvements && <div style={{ fontSize: 12, color: COLORS.text }}>📌 {improvements}</div>}
+                {highlight && (
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: COLORS.greenPale, borderRadius: 10 }}>
+                    <div style={{ fontSize: 12, color: COLORS.green, lineHeight: 1.6 }}>✅ {highlight}</div>
                   </div>
                 )}
               </div>
@@ -1467,22 +1468,23 @@ export default function HealthLog() {
   const handleSummary = async () => {
     setSummaryLoading(true);
     setLoadingStep(0);
-    const result = await generateDailySummary(todayLog, profile.targets, getTodayNutrients());
-    setSummary(result);
-    const todayKey = getTodayKey();
     const nutrients = getTodayNutrients();
+    const proteinPct = profile.targets?.protein ? Math.round((nutrients.protein / profile.targets.protein) * 100) : null;
+    const eatingWindowHours = firstEatAt && lastEatAt ? Math.round((lastEatAt - firstEatAt) / 360000) / 10 : null;
+    const result = await generateDailySummary(todayLog, profile.targets, nutrients);
+    const fullResult = { ...result, proteinPct, eatingWindowHours };
+    setSummary(fullResult);
+    const todayKey = getTodayKey();
     setHistory(h => ({
       ...h,
       [todayKey]: {
         log: todayLog, nutrients,
-        score: result.score || null,
-        scoreLabel: result.scoreLabel || "",
-        highlights: result.highlights || "",
-        improvements: result.improvements || "",
-        tomorrowAdvice: result.tomorrowAdvice || "",
+        proteinPct,
+        eatingWindowHours,
+        highlight: result.highlight || "",
       }
     }));
-    await syncToSheet(todayLog, result.score, todayKey);
+    await syncToSheet(todayLog, null, todayKey);
     setSummaryLoading(false);
   };
 
