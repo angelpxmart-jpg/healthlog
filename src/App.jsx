@@ -81,6 +81,7 @@ const FOODS_DB = {
       { id: "oats", name: "燕麥", defaultGrams: 50, per100: { calories: 389, protein: 16.9, fat: 6.9, carbs: 66.3, fiber: 10.6 } },
       { id: "sweet_potato", name: "地瓜", defaultGrams: 150, per100: { calories: 121, protein: 1.8, fat: 0.3, carbs: 28.1, fiber: 2.5 } },
       { id: "whole_bread", name: "全麥吐司", defaultGrams: 60, per100: { calories: 245, protein: 9.0, fat: 3.1, carbs: 44.0, fiber: 5.3 } },
+      { id: "potato", name: "馬鈴薯", defaultGrams: 100, per100: { calories: 81, protein: 2.0, fat: 0.1, carbs: 18.8, fiber: 1.3 } },
     ]
   }
 };
@@ -185,7 +186,7 @@ function NutrientBar({ nutrient, current, target, hero }) {
           {Math.round(current)} / {target ?? "—"} {nutrient.unit}
         </span>
       </div>
-      <div style={{ height: hero ? 10 : 8, background: COLORS.border, borderRadius: 4, overflow: "hidden" }}>
+      <div style={{ height: 8, background: COLORS.border, borderRadius: 4, overflow: "hidden" }}>
         <div style={{
           height: "100%", borderRadius: 4,
           width: `${pct}%`,
@@ -357,7 +358,7 @@ function IFTimerBar({ firstEatAt, lastEatAt }) {
 
 // ===== FOOD SETUP PAGE =====
 
-function FoodSetupPage({ onComplete }) {
+function FoodSetupPage({ onComplete, onCancel }) {
   const [selected, setSelected] = useState(new Set());
 
   const toggle = (id) => {
@@ -371,7 +372,12 @@ function FoodSetupPage({ onComplete }) {
   return (
     <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: COLORS.bg, fontFamily: "'Noto Sans TC', sans-serif", paddingBottom: 100 }}>
       <div style={{ padding: "24px 20px 16px", background: COLORS.card, borderBottom: `1px solid ${COLORS.border}` }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.green, fontFamily: "'Noto Serif TC', serif" }}>選擇常備食材</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: COLORS.green, fontFamily: "'Noto Serif TC', serif" }}>選擇常備食材</div>
+          {onCancel && (
+            <button onClick={onCancel} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: COLORS.textMuted, lineHeight: 1, padding: "0 4px" }}>×</button>
+          )}
+        </div>
         <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>勾選常買的食材，記錄頁一鍵快速加入</div>
       </div>
 
@@ -901,7 +907,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
       {/* Mini stats header */}
       <div style={{ ...styles.header, paddingBottom: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={styles.headerTitle}>💬 飲食記錄</div>
+          <div style={styles.headerTitle}>Track</div>
           <div style={{ fontSize: 12, color: COLORS.textMuted }}>{today}</div>
         </div>
         {targets && (
@@ -915,18 +921,14 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
               const tgt = targets[n.key];
               const pct = Math.min(100, Math.round(curr / tgt * 100));
               const over = curr > tgt;
-              const isProtein = n.key === "protein";
               return (
                 <div key={n.key} style={{
-                  flex: isProtein ? 1.4 : 1,
-                  background: isProtein ? COLORS.greenPale : COLORS.bg,
-                  borderRadius: 8, padding: "5px 8px",
-                  border: isProtein ? `1px solid ${COLORS.greenLight}` : "none",
+                  flex: 1, background: COLORS.bg, borderRadius: 8, padding: "5px 8px",
                 }}>
-                  <div style={{ fontSize: 11, color: over ? COLORS.accent : (isProtein ? COLORS.green : COLORS.textMuted), fontWeight: over || isProtein ? 700 : 400 }}>
+                  <div style={{ fontSize: 11, color: over ? COLORS.accent : COLORS.textMuted, fontWeight: over ? 700 : 400 }}>
                     {n.label} {curr}<span style={{ fontSize: 9 }}>{n.unit}</span>
                   </div>
-                  <div style={{ height: isProtein ? 4 : 3, background: COLORS.border, borderRadius: 2, marginTop: 3, overflow: "hidden" }}>
+                  <div style={{ height: 3, background: COLORS.border, borderRadius: 2, marginTop: 3, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${pct}%`, background: over ? COLORS.accent : COLORS.green, borderRadius: 2 }} />
                   </div>
                 </div>
@@ -1098,7 +1100,7 @@ function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, 
   return (
     <div>
       <div style={styles.header}>
-        <div style={styles.headerTitle}>🌿 健康日誌</div>
+        <div style={styles.headerTitle}>健康日誌</div>
         <div style={styles.headerDate}>{new Date().toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}</div>
       </div>
 
@@ -1201,7 +1203,7 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
   const [expandedDay, setExpandedDay] = useState(null);
 
   const days = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 30; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
     days.push(d.toISOString().split("T")[0]);
   }
@@ -1220,7 +1222,7 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
   return (
     <div>
       <div style={styles.header}>
-        <div style={styles.headerTitle}>📅 兩週記錄</div>
+        <div style={styles.headerTitle}>Monthly</div>
         <div style={styles.headerDate}>點擊日期展開詳情</div>
       </div>
 
@@ -1245,15 +1247,7 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
         const entry = getEntry(key);
         const isExpanded = expandedDay === key;
         const isToday = key === getTodayKey();
-        if (!entry) return (
-          <div key={key} style={{ margin: "4px 16px", padding: "12px 16px", background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", opacity: 0.5 }}>
-            <div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textMuted }}>{formatDateLabel(key)}</span>
-              <span style={{ fontSize: 11, color: COLORS.border, marginLeft: 8 }}>{key}</span>
-            </div>
-            <span style={{ fontSize: 12, color: COLORS.border }}>無記錄</span>
-          </div>
-        );
+        if (!entry) return null;
 
         const { log: dayLog, nutrients, score, scoreLabel, highlights, improvements } = entry;
         const allMeals = [...(dayLog.breakfast||[]), ...(dayLog.lunch||[]), ...(dayLog.dinner||[]), ...(dayLog.snack||[])];
@@ -1540,7 +1534,7 @@ export default function HealthLog() {
       position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
       width: "100%", maxWidth: 430, background: COLORS.card,
       borderTop: `1px solid ${COLORS.border}`, display: "flex",
-      padding: "8px 0 12px", zIndex: 20,
+      padding: "14px 0 20px", zIndex: 20,
     },
     navItem: (active) => ({
       flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
@@ -1559,10 +1553,10 @@ export default function HealthLog() {
   if (showFoodSetup) return (
     <div style={styles.app}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;600&display=swap');`}</style>
-      <FoodSetupPage onComplete={(selected) => {
-        setQuickFoods(selected);
-        setShowFoodSetup(false);
-      }} />
+      <FoodSetupPage
+        onComplete={(selected) => { setQuickFoods(selected); setShowFoodSetup(false); }}
+        onCancel={() => setShowFoodSetup(false)}
+      />
     </div>
   );
 
@@ -1651,16 +1645,13 @@ export default function HealthLog() {
 
       <div style={styles.bottomNav}>
         <div style={styles.navItem(page === "home")} onClick={() => setPage("home")}>
-          <span style={{ fontSize: 22 }}>🏠</span>
-          <span style={{ fontSize: 11 }}>今日</span>
+          <span style={{ fontSize: 13, fontWeight: page === "home" ? 700 : 400 }}>Today</span>
         </div>
         <div style={styles.navItem(page === "chat")} onClick={() => setPage("chat")}>
-          <span style={{ fontSize: 22 }}>💬</span>
-          <span style={{ fontSize: 11 }}>記錄</span>
+          <span style={{ fontSize: 13, fontWeight: page === "chat" ? 700 : 400 }}>Track</span>
         </div>
         <div style={styles.navItem(page === "history")} onClick={() => setPage("history")}>
-          <span style={{ fontSize: 22 }}>📅</span>
-          <span style={{ fontSize: 11 }}>詳情</span>
+          <span style={{ fontSize: 13, fontWeight: page === "history" ? 700 : 400 }}>Monthly</span>
         </div>
       </div>
     </div>
