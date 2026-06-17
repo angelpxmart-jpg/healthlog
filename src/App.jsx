@@ -167,10 +167,10 @@ function NutrientBar({ nutrient, current, target, hero }) {
   const pct = target ? Math.min((current / target) * 100, 100) : 0;
   const over = target && current > target;
   return (
-    <div style={{ marginBottom: hero ? 18 : 12 }}>
+    <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <span style={{
-          fontSize: hero ? 15 : 13,
+          fontSize: hero ? 14 : 13,
           color: hero ? COLORS.text : COLORS.textMuted,
           fontFamily: "'Noto Serif TC', serif",
           fontWeight: hero ? 700 : 400,
@@ -178,14 +178,14 @@ function NutrientBar({ nutrient, current, target, hero }) {
           {nutrient.icon} {nutrient.label}
         </span>
         <span style={{
-          fontSize: hero ? 15 : 13,
+          fontSize: hero ? 14 : 13,
           fontWeight: 700,
           color: over ? COLORS.accent : (hero ? COLORS.green : COLORS.text),
         }}>
           {Math.round(current)} / {target ?? "—"} {nutrient.unit}
         </span>
       </div>
-      <div style={{ height: hero ? 12 : 8, background: COLORS.border, borderRadius: 4, overflow: "hidden" }}>
+      <div style={{ height: hero ? 10 : 8, background: COLORS.border, borderRadius: 4, overflow: "hidden" }}>
         <div style={{
           height: "100%", borderRadius: 4,
           width: `${pct}%`,
@@ -551,8 +551,9 @@ function FoodGramsModal({ food, defaultGrams, currentMeal, onConfirm, onCancel }
 // ===== QUICK FOOD ROW =====
 
 function QuickFoodRow({ quickFoods, foodFrequency, onSelect, onManage }) {
-  if (!quickFoods?.length) return null;
-  const sorted = [...quickFoods].sort((a, b) => (foodFrequency[b] || 0) - (foodFrequency[a] || 0));
+  const sorted = quickFoods?.length
+    ? [...quickFoods].sort((a, b) => (foodFrequency[b] || 0) - (foodFrequency[a] || 0))
+    : [];
 
   return (
     <div style={{ background: COLORS.card, borderBottom: `1px solid ${COLORS.border}` }}>
@@ -588,6 +589,11 @@ function QuickFoodRow({ quickFoods, foodFrequency, onSelect, onManage }) {
             </button>
           );
         })}
+        {!sorted.length && (
+          <div style={{ fontSize: 12, color: COLORS.textMuted, padding: "6px 4px", whiteSpace: "nowrap", alignSelf: "center" }}>
+            點「＋ 管理」設定快速食材
+          </div>
+        )}
       </div>
     </div>
   );
