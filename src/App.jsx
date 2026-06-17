@@ -240,8 +240,10 @@ async function callClaude(messages, systemPrompt) {
 }
 
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyVG6GYtzUY7BL60hVQDMb1EVyQShCwz2o0L4_oF1PJAQ-l3ewc4fbS224wU3lhnK3Dlw/exec";
+const GAS_SYNC_ENABLED = false; // GAS web app 已失效，Phase 2 將用 Google Sign-In 取代
 
 async function syncToSheet(todayLog, score, date) {
+  if (!GAS_SYNC_ENABLED) return;
   try {
     const form = new FormData();
     form.append("payload", JSON.stringify({ log: todayLog, score: score || "", date }));
@@ -252,6 +254,7 @@ async function syncToSheet(todayLog, score, date) {
 }
 
 async function loadFromSheet(date) {
+  if (!GAS_SYNC_ENABLED) return null;
   try {
     const res = await fetch(`${SHEET_URL}?date=${date}`);
     const data = await res.json();
