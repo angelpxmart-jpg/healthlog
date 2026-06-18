@@ -1494,7 +1494,7 @@ export default function HealthLog() {
     app: {
       maxWidth: 430, margin: "0 auto", minHeight: "100vh",
       background: COLORS.bg, fontFamily: "'Noto Sans TC', sans-serif",
-      position: "relative", paddingBottom: 80,
+      position: "relative", paddingBottom: "calc(80px + env(safe-area-inset-bottom))",
     },
     header: {
       background: COLORS.card, borderBottom: `1px solid ${COLORS.border}`,
@@ -1536,11 +1536,14 @@ export default function HealthLog() {
       position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
       width: "100%", maxWidth: 430, background: COLORS.card,
       borderTop: `1px solid ${COLORS.border}`, display: "flex",
-      padding: "14px 0 20px", zIndex: 20,
+      paddingBottom: "env(safe-area-inset-bottom)", zIndex: 20,
     },
     navItem: (active) => ({
       flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-      gap: 3, cursor: "pointer", color: active ? COLORS.green : COLORS.textMuted,
+      justifyContent: "center", gap: 3, cursor: "pointer",
+      color: active ? COLORS.green : COLORS.textMuted,
+      borderTop: active ? `2.5px solid ${COLORS.green}` : "2.5px solid transparent",
+      paddingTop: 12, paddingBottom: 14,
     }),
     tag: (active) => ({
       padding: "6px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer",
