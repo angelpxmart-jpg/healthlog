@@ -1270,10 +1270,10 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                {(proteinPct !== null || eatingWindowHours !== null)
+                {(proteinPct != null || eatingWindowHours != null)
                   ? <div>
-                      {proteinPct !== null && <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.green }}>蛋白質 {proteinPct}%</div>}
-                      {eatingWindowHours !== null && <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>進食 {eatingWindowHours}h</div>}
+                      {proteinPct != null && <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.green }}>蛋白質 {proteinPct}%</div>}
+                      {eatingWindowHours != null && <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>進食 {eatingWindowHours}h</div>}
                     </div>
                   : <div style={{ fontSize: 12, color: COLORS.border }}>未記錄</div>
                 }
