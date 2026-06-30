@@ -122,15 +122,38 @@ function estimateTotalMeals(history) {
 
 // ===== HELPERS =====
 
+function getDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getTodayKey() {
-  return new Date().toISOString().split("T")[0];
+  return getDateKey();
+}
+
+function getStoredTodayAdvice() {
+  try {
+    const advice = JSON.parse(localStorage.getItem("hl_lastadvice"));
+    if (advice?.date === getTodayKey()) return advice;
+    localStorage.removeItem("hl_lastadvice");
+    return null;
+  } catch {
+    localStorage.removeItem("hl_lastadvice");
+    return null;
+  }
+}
+
+function clearStoredAdvice() {
+  localStorage.removeItem("hl_lastadvice");
 }
 
 function formatDateLabel(dateKey) {
   const d = new Date(dateKey + "T00:00:00");
   const today = getTodayKey();
   const yest = new Date(); yest.setDate(yest.getDate() - 1);
-  const yKey = yest.toISOString().split("T")[0];
+  const yKey = getDateKey(yest);
   if (dateKey === today) return "今天";
   if (dateKey === yKey) return "昨天";
   return d.toLocaleDateString("zh-TW", { month: "long", day: "numeric", weekday: "short" });
@@ -278,19 +301,21 @@ function AdviceCard({ advice }) {
     const actionSections = sections.filter(s => s.isAction);
     const otherSections = sections.filter(s => !s.isData && !s.isAction);
     const displaySections = actionSections.length > 0 ? actionSections : otherSections;
+    const displayItems = displaySections.flatMap(sec => sec.items).filter(Boolean);
+    const fallbackLines = lines
+      .filter(line => /下一餐|建議|蛋白質|雞胸|豆腐|魚|蛋|優格|毛豆|牛奶|肉|蝦|鮪|鮭|飯|蔬菜|青菜|地瓜|馬鈴薯|建議：/.test(line))
+      .filter(line => !/今日累積|剩餘空間|已記錄/.test(line));
+    const fallbackItems = fallbackLines.length > 0 ? fallbackLines : lines.slice(-4);
+    const itemsToRender = displayItems.length > 0 ? displayItems : fallbackItems;
     return (
       <div>
-        {displaySections.map((sec, i) => (
-          <div key={i}>
-            {sec.items.map((item, j) => (
-              <div key={j} style={{
-                fontSize: 14, color: COLORS.text, lineHeight: 1.75,
-                paddingBottom: 12, marginBottom: 12,
-                borderBottom: j < sec.items.length - 1 ? `1px solid ${COLORS.border}` : "none",
-              }}>
-                {renderAdviceLine(item)}
-              </div>
-            ))}
+        {itemsToRender.map((item, i) => (
+          <div key={i} style={{
+            fontSize: 14, color: COLORS.text, lineHeight: 1.75,
+            paddingBottom: 12, marginBottom: 12,
+            borderBottom: i < itemsToRender.length - 1 ? `1px solid ${COLORS.border}` : "none",
+          }}>
+            {renderAdviceLine(item)}
           </div>
         ))}
       </div>
@@ -836,10 +861,12 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
       const meal = result.meal || "snack";
       setTodayLog(log => ({ ...log, [meal]: [...log[meal], ...result.items] }));
       setLastAdvice({
+        date: getTodayKey(),
         meal,
         nextMeal: NEXT_MEAL_MAP[meal] || "下一餐",
         text: result.message,
         time: new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }),
+        generatedAt: new Date().toISOString(),
       });
       markEatTime();
     }
@@ -857,6 +884,8 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
     const food = pickerFood;
     const item = calcFoodNutrients(food, grams);
     setTodayLog(log => ({ ...log, [meal]: [...log[meal], item] }));
+    clearStoredAdvice();
+    setLastAdvice(null);
     setFoodFrequency(f => ({ ...f, [food.id]: (f[food.id] || 0) + 1 }));
     setLastGrams(lg => ({ ...lg, [food.id]: grams }));
     markEatTime();
@@ -1096,7 +1125,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
 
 // ===== HOME PAGE =====
 
-function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, summary, summaryLoading, loadingStep, handleSummary, setShowSetup, firstEatAt, lastEatAt, styles }) {
+function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, setLastAdvice, summary, summaryLoading, loadingStep, handleSummary, setShowSetup, firstEatAt, lastEatAt, styles }) {
   return (
     <div>
       <div style={styles.header}>
@@ -1150,7 +1179,11 @@ function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, 
                   {Math.round(item.calories)} kcal
                 </span>
                 <button
-                  onClick={() => setTodayLog(log => ({ ...log, [meal]: log[meal].filter((_, idx) => idx !== i) }))}
+                  onClick={() => {
+                    setTodayLog(log => ({ ...log, [meal]: log[meal].filter((_, idx) => idx !== i) }));
+                    clearStoredAdvice();
+                    setLastAdvice(null);
+                  }}
                   style={{ background: "none", border: "none", color: COLORS.border, cursor: "pointer", fontSize: 18, padding: "0 0 0 6px", lineHeight: 1, flexShrink: 0 }}>×</button>
               </div>
             ))}
@@ -1208,7 +1241,7 @@ function HistoryPage({ history, todayLog, profile, getTodayNutrients, summary, s
   const days = [];
   for (let i = 0; i < 30; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
-    days.push(d.toISOString().split("T")[0]);
+    days.push(getDateKey(d));
   }
 
   const getEntry = (key) => {
@@ -1359,9 +1392,7 @@ export default function HealthLog() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const [lastAdvice, setLastAdvice] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("hl_lastadvice")) || null; } catch { return null; }
-  });
+  const [lastAdvice, setLastAdvice] = useState(getStoredTodayAdvice);
   const [profileForm, setProfileForm] = useState(profile);
 
   // Quick food state
@@ -1440,7 +1471,13 @@ export default function HealthLog() {
   useEffect(() => { localStorage.setItem("hl_profile", JSON.stringify(profile)); }, [profile]);
   useEffect(() => { localStorage.setItem("hl_log", JSON.stringify({ date: getTodayKey(), log: todayLog })); }, [todayLog]);
   useEffect(() => { localStorage.setItem("hl_history", JSON.stringify(history)); }, [history]);
-  useEffect(() => { if (lastAdvice) localStorage.setItem("hl_lastadvice", JSON.stringify(lastAdvice)); }, [lastAdvice]);
+  useEffect(() => {
+    if (lastAdvice?.date === getTodayKey()) {
+      localStorage.setItem("hl_lastadvice", JSON.stringify(lastAdvice));
+    } else {
+      localStorage.removeItem("hl_lastadvice");
+    }
+  }, [lastAdvice]);
   useEffect(() => {
     if (summaryLoading) {
       const iv = setInterval(() => setLoadingStep(s => s + 1), 1200);
@@ -1618,7 +1655,7 @@ export default function HealthLog() {
 
       {page === "home" && <HomePage
         profile={profile} todayLog={todayLog} setTodayLog={setTodayLog} todayNutrients={todayNutrients}
-        lastAdvice={lastAdvice} summary={summary} summaryLoading={summaryLoading}
+        lastAdvice={lastAdvice} setLastAdvice={setLastAdvice} summary={summary} summaryLoading={summaryLoading}
         loadingStep={loadingStep} handleSummary={handleSummary}
         setShowSetup={setShowSetup}
         firstEatAt={firstEatAt} lastEatAt={lastEatAt}
