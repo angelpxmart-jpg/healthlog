@@ -120,6 +120,46 @@ function estimateTotalMeals(history) {
   return Math.max(1, Math.round(avg));
 }
 
+function buildFallbackAdvice(todayLog, todayNutrients, targets, estimatedTotalMeals) {
+  if (!targets) return null;
+  const mealOrder = ["breakfast", "lunch", "dinner", "snack"];
+  const mealsWithFood = mealOrder.filter(meal => todayLog[meal]?.length > 0);
+  if (mealsWithFood.length === 0) return null;
+
+  const latestMeal = mealsWithFood[mealsWithFood.length - 1];
+  const regularMealsEaten = ["breakfast", "lunch", "dinner"].filter(meal => todayLog[meal]?.length > 0).length;
+  const remainingMeals = Math.max(1, estimatedTotalMeals - regularMealsEaten);
+  const remainingProtein = Math.max(0, Math.round((targets.protein || 0) - todayNutrients.protein));
+  const proteinPerMeal = remainingMeals > 0 ? Math.round(remainingProtein / remainingMeals) : remainingProtein;
+  const remainingCalories = Math.max(0, Math.round((targets.calories || 0) - todayNutrients.calories));
+  const proteinTarget = remainingProtein > 0 ? Math.max(15, proteinPerMeal) : 15;
+
+  const foodLine = proteinTarget >= 45
+    ? "雞胸肉 150g（蛋白質 33g）+嫩豆腐 150g（蛋白質 9g）+水煮蛋 1顆（蛋白質 6g）"
+    : proteinTarget >= 25
+      ? "雞胸肉 120g（蛋白質 28g）+燙青菜 200g（纖維 4g）"
+      : "水煮蛋 1顆（蛋白質 6g）+無糖豆漿 400ml（蛋白質 14g）";
+  const suggestionLine = proteinTarget >= 45
+    ? "建議：雞胸肉+嫩豆腐+水煮蛋"
+    : proteinTarget >= 25
+      ? "建議：雞胸肉+燙青菜"
+      : "建議：水煮蛋+無糖豆漿";
+
+  const text = remainingProtein > 0
+    ? `目前剩餘約 ${remainingCalories} kcal，蛋白質缺口還有 ${remainingProtein}g，下一餐至少需要 ${proteinTarget}g 蛋白質。\n${foodLine}\n${suggestionLine}`
+    : `蛋白質已達標，下一餐以蔬菜和適量主食為主，維持飽足感即可。\n燙青菜 200g（纖維 4g）+糙米飯半碗 80g\n建議：燙青菜+糙米飯`;
+
+  return {
+    date: getTodayKey(),
+    meal: latestMeal,
+    nextMeal: NEXT_MEAL_MAP[latestMeal] || "下一餐",
+    text,
+    time: "即時估算",
+    generatedAt: new Date().toISOString(),
+    fallback: true,
+  };
+}
+
 // ===== HELPERS =====
 
 function getDateKey(date = new Date()) {
@@ -1125,7 +1165,9 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
 
 // ===== HOME PAGE =====
 
-function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, setLastAdvice, summary, summaryLoading, loadingStep, handleSummary, setShowSetup, firstEatAt, lastEatAt, styles }) {
+function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, setLastAdvice, summary, summaryLoading, loadingStep, handleSummary, setShowSetup, firstEatAt, lastEatAt, estimatedTotalMeals, styles }) {
+  const displayAdvice = lastAdvice || buildFallbackAdvice(todayLog, todayNutrients, profile.targets, estimatedTotalMeals);
+
   return (
     <div>
       <div style={styles.header}>
@@ -1146,17 +1188,17 @@ function HomePage({ profile, todayLog, setTodayLog, todayNutrients, lastAdvice, 
         ))}
       </div>
 
-      {lastAdvice && (
+      {displayAdvice && (
         <div style={styles.card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.green }}>
-              {lastAdvice.nextMeal}建議
+              {displayAdvice.nextMeal}建議
             </div>
             <span style={{ fontSize: 11, color: COLORS.textMuted }}>
-              {MEAL_LABELS[lastAdvice.meal] || lastAdvice.meal} 後 · {lastAdvice.time}
+              {MEAL_LABELS[displayAdvice.meal] || displayAdvice.meal} 後 · {displayAdvice.time}
             </span>
           </div>
-          <AdviceCard advice={lastAdvice.text} />
+          <AdviceCard advice={displayAdvice.text} />
         </div>
       )}
 
@@ -1659,6 +1701,7 @@ export default function HealthLog() {
         loadingStep={loadingStep} handleSummary={handleSummary}
         setShowSetup={setShowSetup}
         firstEatAt={firstEatAt} lastEatAt={lastEatAt}
+        estimatedTotalMeals={estimatedTotalMeals}
         styles={styles}
       />}
 
