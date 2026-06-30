@@ -30,6 +30,8 @@ const NEXT_MEAL_MAP = { breakfast: "午餐", lunch: "晚餐", dinner: "明日早
 
 const defaultProfile = { height: "", weight: "", age: "", goal: "減脂", targets: null };
 const defaultLog = { breakfast: [], lunch: [], dinner: [], snack: [], exercise: [] };
+const BOTTOM_NAV_HEIGHT = 64;
+const TRACK_COMPOSER_NAV_GAP = 12;
 
 // ===== FOODS DB (衛福部食品營養成分資料庫 + 小時達包裝參考) =====
 const FOODS_DB = {
@@ -621,22 +623,42 @@ function FoodGramsModal({ food, defaultGrams, currentMeal, onConfirm, onCancel }
 
 // ===== QUICK FOOD ROW =====
 
+function CameraIcon() {
+  return (
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.4-2h5.2L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M12 15.5a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12h13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="m13 6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function QuickFoodRow({ quickFoods, foodFrequency, onSelect, onManage }) {
   const sorted = quickFoods?.length
     ? [...quickFoods].sort((a, b) => (foodFrequency[b] || 0) - (foodFrequency[a] || 0))
     : [];
 
   return (
-    <div style={{ background: COLORS.card, borderBottom: `1px solid ${COLORS.border}` }}>
+    <div style={{ background: COLORS.card }}>
       <div style={{
         overflowX: "auto", display: "flex", gap: 8,
-        padding: "8px 12px",
+        padding: "0 16px",
+        minHeight: 44,
+        alignItems: "center",
         scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
       }}>
         <button
           onClick={onManage}
           style={{
-            flexShrink: 0, padding: "6px 10px",
+            flexShrink: 0, minHeight: 44, padding: "0 12px",
             background: COLORS.bg, border: `1px solid ${COLORS.border}`,
             borderRadius: 20, fontSize: 13, color: COLORS.textMuted,
             cursor: "pointer",
@@ -650,7 +672,7 @@ function QuickFoodRow({ quickFoods, foodFrequency, onSelect, onManage }) {
             <button key={foodId}
               onClick={() => onSelect(food)}
               style={{
-                flexShrink: 0, padding: "6px 14px",
+                flexShrink: 0, minHeight: 38, padding: "0 14px",
                 background: COLORS.greenPale, border: `1px solid ${COLORS.greenLight}`,
                 borderRadius: 20, fontSize: 13, color: COLORS.green,
                 cursor: "pointer", fontFamily: "'Noto Sans TC', sans-serif",
@@ -661,7 +683,7 @@ function QuickFoodRow({ quickFoods, foodFrequency, onSelect, onManage }) {
           );
         })}
         {!sorted.length && (
-          <div style={{ fontSize: 12, color: COLORS.textMuted, padding: "6px 4px", whiteSpace: "nowrap", alignSelf: "center" }}>
+          <div style={{ fontSize: 12, color: COLORS.textMuted, padding: "0 2px", whiteSpace: "nowrap", alignSelf: "center" }}>
             點「＋ 管理」設定快速食材
           </div>
         )}
@@ -876,6 +898,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
   };
 
   const handleSend = async () => {
+    if (isLoading) return;
     const text = input.trim();
     if (!text && pendingImages.length === 0) return;
 
@@ -959,7 +982,10 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
     });
   };
 
-  const hasQuickFoods = quickFoods && quickFoods.length > 0;
+  const canSend = (input.trim().length > 0 || pendingImages.length > 0) && !isLoading;
+  const composerBottomOffset = BOTTOM_NAV_HEIGHT + TRACK_COMPOSER_NAV_GAP;
+  const composerInputHeight = pendingImages.length > 0 ? 122 : 64;
+  const composerStackPadding = composerBottomOffset + composerInputHeight + 44 + 14;
 
   return (
     <div>
@@ -1008,7 +1034,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
       </div>
 
       {/* Messages */}
-      <div style={{ padding: "12px 16px", paddingBottom: hasQuickFoods ? 198 : 160 }}>
+      <div style={{ padding: "12px 16px", paddingBottom: `calc(${composerStackPadding}px + env(safe-area-inset-bottom))` }}>
         {messages.map((msg, i) => (
           <div key={i} style={{
             display: "flex",
@@ -1095,8 +1121,17 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
 
       {/* Quick food row + input bar (fixed) */}
       <div style={{
-        position: "fixed", bottom: 62, left: "50%", transform: "translateX(-50%)",
-        width: "100%", maxWidth: 430, zIndex: 15,
+        position: "fixed",
+        bottom: `calc(${composerBottomOffset}px + env(safe-area-inset-bottom))`,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: 430,
+        zIndex: 15,
+        background: COLORS.card,
+        borderTop: `1px solid ${COLORS.border}`,
+        boxShadow: "0 -1px 4px rgba(0,0,0,0.04)",
+        paddingTop: 6,
       }}>
         <QuickFoodRow
           quickFoods={quickFoods}
@@ -1105,8 +1140,8 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
           onManage={onShowFoodSetup}
         />
         <div style={{
-          background: COLORS.card, borderTop: `1px solid ${COLORS.border}`,
-          padding: "10px 12px",
+          background: COLORS.card,
+          padding: "8px 16px 10px",
         }}>
           {pendingImages.length > 0 && (
             <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -1126,36 +1161,82 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
               ))}
             </div>
           )}
-          <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", minHeight: 46 }}>
             <button
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, padding: "4px 2px", flexShrink: 0 }}
-              onClick={() => fileRef.current?.click()}>📷</button>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
-            <textarea
+              aria-label="上傳食物照片"
               style={{
-                flex: 1, padding: "9px 14px", borderRadius: 20,
-                border: `1.5px solid ${COLORS.border}`, background: COLORS.bg,
-                fontSize: 14, color: COLORS.text, fontFamily: "'Noto Sans TC', sans-serif",
-                outline: "none", resize: "none", boxSizing: "border-box",
-                maxHeight: 100, lineHeight: 1.5,
+                width: 44, height: 44, borderRadius: "50%",
+                background: COLORS.bg,
+                border: `1px solid ${COLORS.border}`,
+                cursor: "pointer",
+                padding: 0,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: COLORS.textMuted,
               }}
-              rows={1}
-              placeholder="輸入你吃了什麼，或問點餐策略..."
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
+              onClick={() => fileRef.current?.click()}><CameraIcon /></button>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
+            <div style={{ position: "relative", flex: 1, minWidth: 0, height: 48 }}>
+              <textarea
+                aria-label="輸入飲食或點餐策略"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 24,
+                  border: `1.5px solid ${COLORS.border}`, background: COLORS.bg,
+                  fontSize: 16, color: COLORS.text, fontFamily: "'Noto Sans TC', sans-serif",
+                  outline: "none", resize: "none", boxSizing: "border-box",
+                  maxHeight: 100, lineHeight: 1.45,
+                  overflow: "hidden",
+                }}
+                rows={1}
+                placeholder=""
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              {!input && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: 15,
+                    right: 14,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 16,
+                    lineHeight: 1,
+                    color: COLORS.textMuted,
+                    fontFamily: "'Noto Sans TC', sans-serif",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    pointerEvents: "none",
+                  }}
+                >
+                  輸入你吃了什麼，或問點餐策略...
+                </div>
+              )}
+            </div>
             <button
+              aria-label="送出"
+              disabled={!canSend}
               style={{
-                width: 40, height: 40, borderRadius: "50%",
-                background: (input.trim() || pendingImages.length > 0) ? COLORS.green : COLORS.border,
-                border: "none", cursor: "pointer",
+                width: 44, height: 44, borderRadius: "50%",
+                background: canSend ? COLORS.green : COLORS.border,
+                border: "none",
+                cursor: canSend ? "pointer" : "default",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 18, flexShrink: 0, color: "#fff",
-                transition: "background 0.2s",
+                flexShrink: 0,
+                color: canSend ? "#fff" : COLORS.textMuted,
+                transition: "background 0.2s, color 0.2s",
               }}
               onClick={handleSend}
-            >→</button>
+            ><SendIcon /></button>
           </div>
         </div>
       </div>
@@ -1573,7 +1654,7 @@ export default function HealthLog() {
     app: {
       maxWidth: 430, margin: "0 auto", minHeight: "100vh",
       background: COLORS.bg, fontFamily: "'Noto Sans TC', sans-serif",
-      position: "relative", paddingBottom: "calc(80px + env(safe-area-inset-bottom))",
+      position: "relative", paddingBottom: `calc(${BOTTOM_NAV_HEIGHT + 16}px + env(safe-area-inset-bottom))`,
     },
     header: {
       background: COLORS.card, borderBottom: `1px solid ${COLORS.border}`,
@@ -1615,6 +1696,7 @@ export default function HealthLog() {
       position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
       width: "100%", maxWidth: 430, background: COLORS.card,
       borderTop: `1px solid ${COLORS.border}`, display: "flex",
+      minHeight: BOTTOM_NAV_HEIGHT,
       paddingBottom: "env(safe-area-inset-bottom)", zIndex: 20,
     },
     navItem: (active) => ({
