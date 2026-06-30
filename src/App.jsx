@@ -31,7 +31,7 @@ const NEXT_MEAL_MAP = { breakfast: "午餐", lunch: "晚餐", dinner: "明日早
 const defaultProfile = { height: "", weight: "", age: "", goal: "減脂", targets: null };
 const defaultLog = { breakfast: [], lunch: [], dinner: [], snack: [], exercise: [] };
 const BOTTOM_NAV_HEIGHT = 64;
-const TRACK_COMPOSER_NAV_GAP = 12;
+const TRACK_COMPOSER_NAV_GAP = 10;
 
 // ===== FOODS DB (衛福部食品營養成分資料庫 + 小時達包裝參考) =====
 const FOODS_DB = {
@@ -985,7 +985,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
   const canSend = (input.trim().length > 0 || pendingImages.length > 0) && !isLoading;
   const composerBottomOffset = BOTTOM_NAV_HEIGHT + TRACK_COMPOSER_NAV_GAP;
   const composerInputHeight = pendingImages.length > 0 ? 122 : 64;
-  const composerStackPadding = composerBottomOffset + composerInputHeight + 44 + 14;
+  const composerStackPadding = composerBottomOffset + composerInputHeight + 44;
 
   return (
     <div>
@@ -1034,7 +1034,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
       </div>
 
       {/* Messages */}
-      <div style={{ padding: "12px 16px", paddingBottom: `calc(${composerStackPadding}px + env(safe-area-inset-bottom))` }}>
+      <div style={{ padding: "12px 16px", paddingBottom: composerStackPadding }}>
         {messages.map((msg, i) => (
           <div key={i} style={{
             display: "flex",
@@ -1122,7 +1122,7 @@ function ChatPage({ profile, todayLog, setTodayLog, todayNutrients, setLastAdvic
       {/* Quick food row + input bar (fixed) */}
       <div style={{
         position: "fixed",
-        bottom: `calc(${composerBottomOffset}px + env(safe-area-inset-bottom))`,
+        bottom: composerBottomOffset,
         left: "50%",
         transform: "translateX(-50%)",
         width: "100%",
